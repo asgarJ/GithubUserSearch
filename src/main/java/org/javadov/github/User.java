@@ -3,6 +3,7 @@ package org.javadov.github;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.eclipse.egit.github.core.Repository;
 import org.eclipse.egit.github.core.service.RepositoryService;
+import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import javax.servlet.annotation.WebServlet;
@@ -29,9 +30,6 @@ public class User extends HttpServlet {
         response.setContentType("application/json");
         response.setCharacterEncoding("utf-8");
         String userName = request.getParameter("name");
-
-        ObjectMapper mapper = new ObjectMapper();
-
         if (userName == null || userName.isEmpty()) {
             JSONObject jsonObject = new JSONObject();
             jsonObject.put("errorMessage", "Please don't leave the username field empty!");
@@ -48,16 +46,18 @@ public class User extends HttpServlet {
         }
         if (repositories != null) {
             repositories.sort((Repository r1, Repository r2) -> r2.getSize() - r1.getSize());
-            List<Repository> result = repositories.subList(0, Math.min(5, repositories.size()));
+            List<Repository> repos = repositories.subList(0, Math.min(5, repositories.size()));
 
-            List<Repo> list = new ArrayList<>();
-            for (Repository repo : result) {
-                list.add(new Repo(repo.getName(), repo.getUrl()));
+            JSONArray list = new JSONArray();
+            for (Repository repo : repos) {
+                JSONObject jsonObject = new JSONObject();
+                jsonObject.put("name", repo.getName());
+                jsonObject.put("url", repo.getUrl());
+                list.add(jsonObject);
             }
 
-            String json = mapper.writeValueAsString(list);
             try (PrintWriter printWriter = response.getWriter()) {
-                printWriter.write(json);
+                printWriter.write(list.toJSONString());
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -66,41 +66,5 @@ public class User extends HttpServlet {
             jsonObject.put("errorMessage", "Please enter a valid username!");
             response.getWriter().write(jsonObject.toJSONString());
         }
-    }
-
-    private List<Repo> getRepos(int top) {
-        return null;
-    }
-}
-
-final class Repo {
-    private String name;
-    private String url;
-
-    public Repo(String name, String url) {
-        this.name = name;
-        this.url = url;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-
-    @Override
-    public String toString() {
-        return "name: " + name + ", url: " + url;
     }
 }
